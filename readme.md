@@ -1,3 +1,3 @@
-# Distributed Job Processing System
+# Distributed Background Job Processing System
 
-This is distributed system that distributed job on different worker that handle background jobs and make sure the same job is not running by the different worker.
+A backend system that runs background jobs across multiple workers. Jobs are stored in PostgreSQL, and workers claim them using row-level locking, so the same job is never picked up by two workers at once. Failed jobs are retried with increasing delays, and jobs are not lost if a worker crashes.
