@@ -16,3 +16,17 @@ Store and manage jobs directly in PostgreSQL, using `FOR UPDATE SKIP LOCKED` for
 - **Lower peak speed:** Redis works in memory and is faster at very high volumes. PostgreSQL is slower because it writes to disk.
 - **Extra database load:** workers regularly check the database for new jobs, which adds queries even when the queue is empty.
 - **More to build and maintain:** features that BullMQ already provides (retries, dashboards, rate limits) must be built and tested by hand, with more room for bugs.
+
+## 002: Set a connection timeout on the database pool
+
+**Decision**
+Set `connectionTimeoutMillis: 5000` on the PostgreSQL connection pool.
+
+**Why**
+- By default, `pg` uses `0`, which means a request for a connection waits forever.
+- If all connections are busy or leaked (for example, a missing `release()`), the code would freeze silently with no error and no log.
+- With a 5 second limit, the request fails with a clear error instead, so the problem is visible and easy to debug.
+
+**Trade-off**
+- If the database is only slow (not broken), a request that would have succeeded after 6 seconds now fails.
+- 5 seconds is chosen as a balance: long enough for normal delays, short enough to catch real problems quickly.
