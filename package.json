@@ -9,7 +9,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "db:check": "node --env-file=.env scripts/check-db.js"
+    "db:check": "node --env-file=.env scripts/check-db.js",
+    "migrate": "node --env-file=.env scripts/migrate.js"
   },
   "keywords": [],
   "author": "",
