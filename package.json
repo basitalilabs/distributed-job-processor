@@ -10,13 +10,16 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:check": "node --env-file=.env scripts/check-db.js",
-    "migrate": "node --env-file=.env scripts/migrate.js"
+    "migrate": "node --env-file=.env scripts/migrate.js",
+    "dev": "node --env-file=.env --watch src/api/server.js",
+    "start": "node --env-file=.env src/api/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "express": "^5.2.1",
     "pg": "^8.23.0"
   }
 }
