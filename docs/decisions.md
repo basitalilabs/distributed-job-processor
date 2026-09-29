@@ -30,3 +30,24 @@ Set `connectionTimeoutMillis: 5000` on the PostgreSQL connection pool.
 **Trade-off**
 - If the database is only slow (not broken), a request that would have succeeded after 6 seconds now fails.
 - 5 seconds is chosen as a balance: long enough for normal delays, short enough to catch real problems quickly.
+
+
+## 003: API design for creating jobs
+
+**Decisions**
+- `POST /jobs` accepts `type`, `payload`, `runAt`, `maxAttempts`. System fields (`status`, `attempts`, locks) cannot be set by the caller.
+- Any job `type` string is accepted. Workers mark jobs with an unknown type as `failed` immediately, without retries.
+- A `runAt` in the past is accepted and the job runs as soon as possible. Invalid dates are rejected with 400.
+- `maxAttempts` defaults to 5, allowed range 1 to 10.
+- API uses camelCase (`runAt`), database uses snake_case (`run_at`). Conversion happens in one place.
+- Request body limited to 64 KB.
+
+**Why**
+- Accepting any type keeps the API independent from the workers, which may be deployed separately.
+- Unknown types are a permanent error, so retrying them only wastes time.
+- Limiting attempts stops broken jobs from retrying almost forever and adding load.
+- Payloads are read on every claim, so large payloads slow the whole queue. Jobs should carry references (like a file ID), not large data.
+
+**Trade-offs**
+- A typo in `type` is only detected when a worker picks up the job, not when the job is created.
+- Callers needing large data must store it elsewhere and pass a reference.
