@@ -1,6 +1,6 @@
 const express = require("express");
 const pool = require("../db/pool");
-
+const jobsRouter = require("./routes/jobs");
 const app = express();
 
 app.use(express.json({ limit: "64kb" }));
@@ -16,6 +16,8 @@ app.get("/health", async function healthCheck(req, res) {
   }
 });
 
+app.use("/jobs", jobsRouter);
+
 // 404: no route matched
 app.use(function handleNotFound(req, res) {
   res.status(404).json({ error: "Not found" });
@@ -23,6 +25,14 @@ app.use(function handleNotFound(req, res) {
 
 // Error handler: 4 parameters tell Express this handles errors
 app.use(function handleError(error, req, res, next) {
+  if (error.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Invalid JSON" });
+  }
+
+  if (error.type === "entity.too.large") {
+    return res.status(413).json({ error: "Payload too large" });
+  }
+
   console.error("Unhandled error:", error);
   res.status(500).json({ error: "Internal server error" });
 });
