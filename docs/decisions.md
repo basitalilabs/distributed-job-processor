@@ -51,3 +51,21 @@ Set `connectionTimeoutMillis: 5000` on the PostgreSQL connection pool.
 **Trade-offs**
 - A typo in `type` is only detected when a worker picks up the job, not when the job is created.
 - Callers needing large data must store it elsewhere and pass a reference.
+
+## 004: Worker design
+
+**Decisions**
+- Claim a job with a single `UPDATE ... WHERE id = (SELECT ... FOR UPDATE SKIP LOCKED) RETURNING *`.
+- Commit the claim immediately, then run the handler outside any transaction, then update the job's status in a separate query.
+- When no job is due, the worker sleeps 1 second before checking again.
+- Each worker identifies itself as `hostname-pid` in `locked_by`.
+
+**Why**
+- A single statement is atomic by itself and needs one round trip, with no manual transaction handling.
+- Running handlers outside the transaction keeps transactions short, so slow jobs do not hold row locks or database connections.
+- A 1 second idle sleep keeps database load low while new jobs still start within about a second.
+- `hostname-pid` is unique per process and container, so `locked_by` shows exactly which worker held a job.
+
+**Trade-offs**
+- If a worker crashes after claiming, the job stays `running` until lease expiry is added (Phase 5).
+- Each idle worker adds one query per second to the database.
