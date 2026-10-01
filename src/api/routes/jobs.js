@@ -36,4 +36,29 @@ router.post("/", async function createJob(req, res, next) {
   }
 });
 
+
+router.get("/:id", async function getJob(req, res, next) {
+  const id = req.params.id;
+
+  // 1. Check the id: only digits, at most 18 of them
+  if (!/^[0-9]+$/.test(id) || id.length > 18) {
+    return res.status(400).json({ error: "Job id must be a positive whole number" });
+  }
+
+  try {
+    // 2. Look it up
+    const result = await pool.query("SELECT * FROM jobs WHERE id = $1", [id]);
+
+    // 3. Not found
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    // 4. Found
+    return res.status(200).json(toApiJob(result.rows[0]));
+  } catch (error) {
+    return next(error);
+  }
+});
+
 module.exports = router;
