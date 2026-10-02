@@ -12,7 +12,8 @@
     "db:check": "node --env-file=.env scripts/check-db.js",
     "migrate": "node --env-file=.env scripts/migrate.js",
     "dev": "node --env-file=.env --watch src/api/server.js",
-    "start": "node --env-file=.env src/api/server.js"
+    "start": "node --env-file=.env src/api/server.js",
+    "worker": "node --env-file=.env src/worker/worker.js"
   },
   "keywords": [],
   "author": "",
