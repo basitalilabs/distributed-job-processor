@@ -1,9 +1,10 @@
 const sleep = require("../utils/sleep");
+const PermanentError = require("../errors/PermanentError");
 
 async function sendEmail(payload, job) {
   // Permanent mistake in the data: fail loudly
   if (typeof payload.to !== "string") {
-    throw new Error("payload.to is required for send_email");
+    throw new PermanentError("payload.to is required for send_email");
   }
 
   console.log("[send_email] job " + job.id + ": sending to " + payload.to);
