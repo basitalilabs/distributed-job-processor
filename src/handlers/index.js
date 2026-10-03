@@ -1,7 +1,8 @@
 const sendEmail = require("./sendEmail");
-
+const flaky = require("./flaky");
 const handlers = {
-  send_email: sendEmail
+  send_email: sendEmail,
+  flaky: flaky
 };
 
 function getHandler(type) {
