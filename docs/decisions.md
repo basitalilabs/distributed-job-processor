@@ -69,3 +69,23 @@ Set `connectionTimeoutMillis: 5000` on the PostgreSQL connection pool.
 **Trade-offs**
 - If a worker crashes after claiming, the job stays `running` until lease expiry is added (Phase 5).
 - Each idle worker adds one query per second to the database.
+
+## 005: Retry policy
+
+**Decisions**
+- A failed job is retried by setting it back to `waiting` with `run_at` in the future. No extra status or column.
+- Delay is exponential: 5s base, doubling per attempt, capped at 300 s.
+- Jitter is proportional: a random 0 to 20% is added to each delay.
+- Handlers throw `PermanentError` for failures that can never succeed. These fail immediately. Every other error is retried.
+- A job is marked `failed` when its attempts reach `max_attempts`.
+- The worker computes the delay in seconds, the database sets the time with `now() + delay`.
+
+**Why**
+- Reusing `run_at` means the claim query needs no change: it already skips jobs that are not due.
+- Backoff gives a failing service time to recover. The cap stops a job from waiting long after the service is healthy again.
+- Proportional jitter keeps retries spread out even at long delays, where a few fixed seconds would not.
+- Retrying by default is the safe choice: a forgotten `PermanentError` wastes attempts, but never loses a job.
+
+**Trade-offs**
+- Hopeless jobs not marked permanent use all their attempts before failing.
+- With the cap, late retries hit a still-broken service every 5 minutes instead of backing off further.
