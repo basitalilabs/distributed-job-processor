@@ -89,3 +89,23 @@ Set `connectionTimeoutMillis: 5000` on the PostgreSQL connection pool.
 **Trade-offs**
 - Hopeless jobs not marked permanent use all their attempts before failing.
 - With the cap, late retries hit a still-broken service every 5 minutes instead of backing off further.
+
+## 006: Recurring jobs
+
+**Decisions**
+- A recurring job is a row in a `schedules` table (cron expression, job type, payload, `next_run_at`). The scheduler creates normal jobs from it. Workers are unchanged.
+- The scheduler is a separate process and can run as multiple instances.
+- A due schedule is claimed with `FOR UPDATE SKIP LOCKED`.
+- Inserting the job and advancing `next_run_at` happen in one transaction.
+- Missed runs are not replayed: after downtime, one job is created and the schedule continues from the next future time.
+- Cron expressions are evaluated in UTC.
+
+**Why**
+- Row locking stops two schedulers from creating the same job twice.
+- One transaction means a crash can never produce a duplicate job or a skipped run.
+- Because the queue is in PostgreSQL, the job insert and the schedule update can share a transaction.
+- Replaying missed runs would flood the queue with outdated work after an outage.
+
+**Trade-offs**
+- Schedules that need every single run (for example billing) would lose runs during downtime.
+- Times are UTC, so callers must convert from local time.
