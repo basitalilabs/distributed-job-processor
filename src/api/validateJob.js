@@ -2,9 +2,7 @@ const MAX_TYPE_LENGTH = 100;
 const MIN_ATTEMPTS = 1;
 const MAX_ATTEMPTS = 10;
 
-function isPlainObject(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+const isPlainObject = require("../utils/isPlainObject");
 
 function validateCreateJob(body) {
   const errors = [];
