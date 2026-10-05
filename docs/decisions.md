@@ -109,3 +109,23 @@ Set `connectionTimeoutMillis: 5000` on the PostgreSQL connection pool.
 **Trade-offs**
 - Schedules that need every single run (for example billing) would lose runs during downtime.
 - Times are UTC, so callers must convert from local time.
+
+## 007: Crash recovery
+
+**Decisions**
+- A claim is a lease: `locked_until` is set 30 seconds ahead when a job is claimed.
+- A reaper step finds `running` jobs whose lease has expired. Jobs with attempts left go back to `waiting`. Jobs with none are marked `failed`.
+- The reaper is its own module but is called from each worker's loop every few seconds, not run as a separate program.
+- While a job runs, the worker sends a heartbeat every 10 seconds that extends the lease.
+- `attempts` is increased at claim time, not at completion.
+
+**Why**
+- A separate reaper keeps the claim query simple and handles exhausted jobs, which a claim query cannot.
+- Running the reaper inside workers means no extra process to deploy, and recovery works whenever at least one worker is alive. It is a single UPDATE, so several workers running it at once is safe.
+- A heartbeat at one third of the lease survives two late or missed heartbeats before the lease expires.
+- Counting attempts at claim time means a job that crashes its worker still uses up attempts and eventually fails, instead of looping forever.
+
+**Trade-offs**
+- A crashed worker's job waits up to the lease length (30 s) before it is recovered.
+- A job can run twice if a worker is alive but its heartbeats stop (for example a blocked event loop). Handlers must be idempotent.
+- A crash that is not the job's fault still costs that job an attempt. A separate crash counter could be added later.
