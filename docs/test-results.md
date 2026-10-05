@@ -39,3 +39,15 @@ Delays follow exponential backoff (5 s, 10 s) plus up to 20% jitter.
 | Start after 28 hours overdue | 1 job created, not one per missed minute |
 | Jobs per minute over 6 minutes | exactly 1 each (verified with SQL, grouped by minute) |
 | Second scheduler started, first stopped | second took over the next minute, no gap, no duplicate |
+
+## Crash recovery test (Phase 5, reaper)
+
+**Setup:** `slow` jobs (a fixed wait), lease of 30 s, reaper run by each worker every 5 s. No heartbeat yet.
+
+| Case | Result |
+|---|---|
+| Worker killed mid-job | job requeued after the lease expired, completed by another worker on attempt 2 |
+| Worker killed mid-job, maxAttempts 1 | job marked failed 32 s after it was claimed |
+| Job longer than the lease (45 s vs 30 s), 2 workers, nobody killed | job ran 5 times, no completion was recorded, marked failed after 165 s. Every worker logged "done" |
+
+**Finding from the third case:** without a heartbeat, a job longer than the lease can never succeed. Each run loses its lease before finishing, the job is taken by another worker, and the cycle repeats until attempts run out. The workers' "done" log lines were false, because their final update matched zero rows. Both problems are addressed in the next step (heartbeat, and checking whether the update changed a row).

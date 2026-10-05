@@ -5,9 +5,11 @@ const getHandler = require("../handlers");
 const sleep = require("../utils/sleep");
 const PermanentError = require("../errors/PermanentError");
 const retryDelay = require("./retryDelay");
+const reapExpiredJobs = require("./reaper");
 
 const WORKER_ID = os.hostname() + "-" + process.pid;
 const IDLE_SLEEP_MS = 1000; // decision 004
+const REAP_INTERVAL_MS = 5000;
 
 async function processJob(job) {
     const handler = getHandler(job.type);
@@ -62,8 +64,18 @@ async function processJob(job) {
 async function runWorker() {
     console.log("Worker " + WORKER_ID + " started");
 
+    let lastReapAt = 0;
     while (true) {
         try {
+
+            if (Date.now() - lastReapAt >= REAP_INTERVAL_MS) {
+                lastReapAt = Date.now();
+                const reaped = await reapExpiredJobs();
+
+                if (reaped.requeued > 0 || reaped.failed > 0) {
+                    console.log("Reaper: " + reaped.requeued + " job(s) requeued, " + reaped.failed + " failed");
+                }
+            }
             const job = await claimJob(WORKER_ID);
 
             if (job === null) {
