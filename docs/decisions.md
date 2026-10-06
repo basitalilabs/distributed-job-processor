@@ -137,3 +137,24 @@ Set `connectionTimeoutMillis: 5000` on the PostgreSQL connection pool.
   A separate crash counter with a lower limit would fix this. Not built.
 - The reaper requeues a job without any delay, so retry backoff (decision 005)
   does not apply to crashes. The only delay is the lease time (30 s).
+
+## 008: Running workers in containers
+
+Decision:
+- The worker runs from its own Docker image. The API and scheduler stay on the laptop for now.
+- Secrets are not in the image. `.env` is excluded with `.dockerignore`, and
+  `DATABASE_URL` is passed in as an environment variable when the container starts.
+- Inside the Compose network the worker reaches the database at host `postgres`
+  (the service name), not `localhost`.
+- The container starts with `node src/worker/worker.js`, not `npm run worker`,
+  because the npm script expects a `.env` file.
+- Worker id stays `hostname-pid`. In a container the pid is usually 1 and the
+  hostname is the container id, so the id is still unique per container.
+
+Why:
+- An image can be shared or pushed to a registry. A password inside it is leaked.
+- `localhost` inside a container is the container itself.
+
+Trade-off:
+- There are now two ways to start a worker (laptop and container) with two
+  different `DATABASE_URL` values. This is extra setup to keep in sync.
