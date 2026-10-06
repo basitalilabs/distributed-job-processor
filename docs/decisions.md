@@ -129,3 +129,11 @@ Set `connectionTimeoutMillis: 5000` on the PostgreSQL connection pool.
 - A crashed worker's job waits up to the lease length (30 s) before it is recovered.
 - A job can run twice if a worker is alive but its heartbeats stop (for example a blocked event loop). Handlers must be idempotent.
 - A crash that is not the job's fault still costs that job an attempt. A separate crash counter could be added later.
+
+**Weakness Known weaknesses (measured in Phase 5d):**
+
+- A job that crashes its worker uses one full attempt per crash, so with the
+  default of 5 attempts it can crash 5 workers before it is marked failed.
+  A separate crash counter with a lower limit would fix this. Not built.
+- The reaper requeues a job without any delay, so retry backoff (decision 005)
+  does not apply to crashes. The only delay is the lease time (30 s).

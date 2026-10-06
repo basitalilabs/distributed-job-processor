@@ -66,3 +66,20 @@ was run 5 times by 2 workers, and ended `failed`. Job 118 is the same
 situation after the fix.
 
 Not measured: the exact moment the reaper requeued job 119.
+
+## Poison job (Phase 5d)
+
+Setup: 1 worker, restarted by hand after each kill. Job: `slow`, 60 s, `maxAttempts: 3`.
+The worker was killed with Ctrl + C shortly after each pickup.
+
+| Crash | Reaper log | Job after |
+|---|---|---|
+| 1 | 1 requeued, 0 failed | `waiting`, picked up again |
+| 2 | 1 requeued, 0 failed | `waiting`, picked up again |
+| 3 | 0 requeued, 1 failed | `failed`, not picked up again |
+
+Final row (job 120): `failed`, `attempts: 3`,
+`last_error: Worker stopped responding (lease expired), no attempts left`.
+103 s from create to failed.
+
+Not tested: a real crash such as out of memory. The crash was simulated by killing the process.
