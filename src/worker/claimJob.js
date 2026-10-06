@@ -1,6 +1,5 @@
 const pool = require("../db/pool");
-
-const LEASE_SECONDS = 30;
+const leaseConfig = require("./leaseConfig");
 
 async function claimJob(workerId) {
   const result = await pool.query(
@@ -18,7 +17,7 @@ async function claimJob(workerId) {
     "  FOR UPDATE SKIP LOCKED " +
     ") " +
     "RETURNING *",
-    [workerId, LEASE_SECONDS]
+    [workerId, leaseConfig.LEASE_SECONDS]
   );
 
   if (result.rows.length === 0) {

@@ -6,6 +6,7 @@ const sleep = require("../utils/sleep");
 const PermanentError = require("../errors/PermanentError");
 const retryDelay = require("./retryDelay");
 const reapExpiredJobs = require("./reaper");
+const heartbeat = require("./heartbeat");
 
 const WORKER_ID = os.hostname() + "-" + process.pid;
 const IDLE_SLEEP_MS = 1000; // decision 004
@@ -25,40 +26,51 @@ async function processJob(job) {
         return;
     }
 
-    // Run the handler
+    // Run the handler, with a heartbeat keeping the lease alive
+    const heartbeatTimer = heartbeat.startHeartbeat(job.id, WORKER_ID);
+    let handlerError = null;
+
     try {
         await handler(job.payload, job);
     } catch (error) {
-        const message = String(error.message || error).slice(0, 1000);
+        handlerError = error;
+    } finally {
+        heartbeat.stopHeartbeat(heartbeatTimer);      // always stop, success or failure
+    }
 
-        const isPermanent = error instanceof PermanentError;
+    // Handler failed: retry or give up
+    if (handlerError !== null) {
+        const message = String(handlerError.message || handlerError).slice(0, 1000);
+        const isPermanent = handlerError instanceof PermanentError;
         const hasAttemptsLeft = job.attempts < job.max_attempts;
 
         if (!isPermanent && hasAttemptsLeft) {
             const delaySeconds = retryDelay.getRetryDelaySeconds(job.attempts);
-            await finishJob.retryJob(job.id, WORKER_ID, message, delaySeconds);
+            const recorded = await finishJob.retryJob(job.id, WORKER_ID, message, delaySeconds);
             console.log(
-                "Job " +
-                job.id +
-                " failed (attempt " +
-                job.attempts +
-                " of " +
-                job.max_attempts +
-                "), retry in " +
-                delaySeconds.toFixed(1) +
-                " s: " +
-                message,
+                recorded
+                    ? "Job " + job.id + " failed (attempt " + job.attempts + " of " + job.max_attempts + "), retry in " + delaySeconds.toFixed(1) + " s: " + message
+                    : "Job " + job.id + " failed, but the lease was lost. Not recorded"
             );
             return;
         }
 
-        await finishJob.markJobFailed(job.id, WORKER_ID, message);
-        console.log("Job " + job.id + " failed permanently: " + message);
+        const recorded = await finishJob.markJobFailed(job.id, WORKER_ID, message);
+        console.log(
+            recorded
+                ? "Job " + job.id + " failed permanently: " + message
+                : "Job " + job.id + " failed, but the lease was lost. Not recorded"
+        );
         return;
     }
-    // Only reached when the handler did not throw
-    await finishJob.markJobDone(job.id, WORKER_ID);
-    console.log("Job " + job.id + " done");
+
+    // Handler succeeded
+    const recorded = await finishJob.markJobDone(job.id, WORKER_ID);
+    if (recorded) {
+        console.log("Job " + job.id + " done");
+    } else {
+        console.log("Job " + job.id + " finished, but the lease was lost. Result not recorded");
+    }
 }
 
 async function runWorker() {

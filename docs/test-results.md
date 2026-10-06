@@ -51,3 +51,18 @@ Delays follow exponential backoff (5 s, 10 s) plus up to 20% jitter.
 | Job longer than the lease (45 s vs 30 s), 2 workers, nobody killed | job ran 5 times, no completion was recorded, marked failed after 165 s. Every worker logged "done" |
 
 **Finding from the third case:** without a heartbeat, a job longer than the lease can never succeed. Each run loses its lease before finishing, the job is taken by another worker, and the cycle repeats until attempts run out. The workers' "done" log lines were false, because their final update matched zero rows. Both problems are addressed in the next step (heartbeat, and checking whether the update changed a row).
+
+## Heartbeat (Phase 5c)
+
+Setup: 2 workers, lease 30 s, heartbeat every 10 s, reaper every 5 s.
+
+| Test | Job | Result |
+|---|---|---|
+| Job longer than the lease (70 s) | 118 | Ran once. `done`, `attempts: 1`. Lease time left was read 4 times during the run: 28.6, 20.2, 21.6, 21.0 s. It never went below 20 s. |
+| Worker killed about 15 s into a 40 s job | 119 | Other worker recovered it. `done`, `attempts: 2`, `last_error: Worker stopped responding (lease expired)`. 84 s from create to done. |
+
+Before the heartbeat, a 45 s job (job 117) lost its lease on every run,
+was run 5 times by 2 workers, and ended `failed`. Job 118 is the same
+situation after the fix.
+
+Not measured: the exact moment the reaper requeued job 119.
