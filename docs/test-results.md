@@ -83,3 +83,21 @@ Final row (job 120): `failed`, `attempts: 3`,
 103 s from create to failed.
 
 Not tested: a real crash such as out of memory. The crash was simulated by killing the process.
+
+## Workers in containers (Phase 5e)
+
+Setup: 2 worker containers (Docker Compose, `--scale worker=2`), database in a
+third container, API on the host. Lease 30 s, heartbeat 10 s, reaper every 5 s.
+
+| Step | Result |
+|---|---|
+| Image run with no environment | Exits with "DATABASE_URL is not set". No secrets in the image. |
+| 2 containers started | Worker ids `23caafb001b3-1` and `04d18d37b2d6-1` (unique hostname, pid 1) |
+| Normal jobs (121, 122) | One run on each container, both `done` |
+| `docker kill` on the container running job 123 (60 s job) | Container exited with code 137 (SIGKILL). The other container requeued and completed it. |
+
+Final row (job 123): `done`, `attempts: 2`,
+`last_error: Worker stopped responding (lease expired)`. 88 s from create to done.
+
+Not tested: workers on separate physical machines, or a network failure
+between a worker and the database.

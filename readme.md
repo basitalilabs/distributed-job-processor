@@ -2,7 +2,7 @@
 
 A backend system that runs background jobs across multiple workers, built on Node.js and PostgreSQL. Jobs are stored in PostgreSQL and claimed with row-level locking, so the same job is never picked up by two workers at once. Failed jobs retry with backoff, and recurring jobs run on cron schedules.
 
-**Status:** in active development. Phases 0 to 4 of 9 are complete. See [Roadmap](#roadmap).
+**Status:** in active development. Phases 0 to 5 of 9 are complete. See [Roadmap](#roadmap).
 
 ## Features
 
@@ -112,6 +112,12 @@ POST /schedules
 }
 ```
 
+  ### Run workers in Docker
+```
+  docker compose up -d --build --scale worker=2
+  docker compose logs -f worker
+```
+
 ## Test results
 
 | Test | Result |
@@ -130,7 +136,8 @@ The reasoning and trade-offs behind each choice are in [docs/decisions.md](docs/
 
 ## Known limitations
 
-- If a worker crashes after claiming a job, the job stays `running`. Lease expiry and recovery are the next phase.
+- A job that crashes its worker uses one attempt per crash and is retried without backoff.
+- Crash recovery is tested with containers on one host, not on separate machines.
 - Workers stop immediately on Ctrl+C. Graceful shutdown is planned.
 - Handlers are simulated. A real webhook delivery handler is planned.
 
@@ -141,7 +148,7 @@ The reasoning and trade-offs behind each choice are in [docs/decisions.md](docs/
 - [x] Phase 2: workers with safe claiming
 - [x] Phase 3: retries, backoff, jitter
 - [x] Phase 4: recurring jobs
-- [ ] Phase 5: crash recovery (lease expiry, heartbeat)
+- [x] Phase 5: crash recovery (lease expiry, heartbeat)
 - [ ] Phase 6: graceful shutdown
 - [ ] Phase 7: webhook delivery with HMAC signing
 - [ ] Phase 8: dashboard
