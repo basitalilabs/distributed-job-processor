@@ -33,8 +33,24 @@ async function retryJob(jobId, workerId, errorMessage, delaySeconds) {
   return result.rowCount > 0;
 }
 
+async function releaseJob(jobId, workerId) {
+  const result = await pool.query(
+    "UPDATE jobs SET " +
+      "status = 'waiting', " +
+      "attempts = attempts - 1, " +
+      "last_error = 'Worker shut down before finishing, job released', " +
+      "locked_by = NULL, " +
+      "locked_until = NULL, " +
+      "updated_at = now() " +
+      "WHERE id = $1 AND locked_by = $2 AND status = 'running'",
+    [jobId, workerId]
+  );
+  return result.rowCount > 0;
+}
+
 module.exports = {
   markJobDone: markJobDone,
   markJobFailed: markJobFailed,
-  retryJob: retryJob
+  retryJob: retryJob,
+  releaseJob: releaseJob
 };

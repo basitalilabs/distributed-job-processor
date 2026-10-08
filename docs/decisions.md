@@ -158,3 +158,32 @@ Why:
 Trade-off:
 - There are now two ways to start a worker (laptop and container) with two
   different `DATABASE_URL` values. This is extra setup to keep in sync.
+
+
+## 009: Graceful shutdown
+
+Context:
+Measured before this change: `docker compose stop worker` ends with exit code 137
+(forced kill). The worker runs as process 1 in the container and ignores SIGTERM,
+so a running job is cut, waits for its lease to expire, and is run again.
+
+Decision:
+- The worker listens for SIGTERM (docker stop) and SIGINT (Ctrl + C).
+- On the signal it stops claiming new jobs.
+- If idle, it exits right away.
+- If running a job, it waits up to 20 seconds for the job to finish.
+  - Finished in time: recorded as normal (done, retry, or failed).
+  - Not finished: the job is released back to `waiting` with `attempts - 1`,
+    then the worker exits.
+- Docker Compose gives the worker 30 seconds (`stop_grace_period`) before a forced kill.
+- The database pool is closed before exit.
+
+Why:
+- Deploys and restarts happen often. They should not cost a lease wait, a rerun,
+  or one of the job's attempts.
+
+Trade-offs:
+- A job released after 20 s loses the work it did so far and starts again on another worker.
+- Lowering attempts on release means a job that is released on every deploy never
+  runs out of attempts from that cause. This is intended.
+- If the worker is killed before it can release the job, the reaper still recovers it (decision 007).

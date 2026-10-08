@@ -7,10 +7,29 @@ const PermanentError = require("../errors/PermanentError");
 const retryDelay = require("./retryDelay");
 const reapExpiredJobs = require("./reaper");
 const heartbeat = require("./heartbeat");
+const pool = require("../db/pool");
 
 const WORKER_ID = os.hostname() + "-" + process.pid;
 const IDLE_SLEEP_MS = 1000; // decision 004
 const REAP_INTERVAL_MS = 5000;
+
+let shuttingDown = false;
+
+function handleStopSignal(signalName) {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
+  console.log("Worker " + WORKER_ID + " received " + signalName + ", will stop after current job");
+}
+
+process.on("SIGTERM", function onSigterm() {
+  handleStopSignal("SIGTERM");
+});
+
+process.on("SIGINT", function onSigint() {
+  handleStopSignal("SIGINT");
+});
 
 async function processJob(job) {
     const handler = getHandler(job.type);
@@ -77,7 +96,7 @@ async function runWorker() {
     console.log("Worker " + WORKER_ID + " started");
 
     let lastReapAt = 0;
-    while (true) {
+    while (!shuttingDown) {
         try {
 
             if (Date.now() - lastReapAt >= REAP_INTERVAL_MS) {
@@ -102,6 +121,8 @@ async function runWorker() {
             await sleep(IDLE_SLEEP_MS);
         }
     }
+    console.log("Worker " + WORKER_ID + " stopped");
+    await pool.end();  
 }
 
 runWorker();
