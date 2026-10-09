@@ -13,13 +13,17 @@ const WORKER_ID = os.hostname() + "-" + process.pid;
 const IDLE_SLEEP_MS = 1000; // decision 004
 const REAP_INTERVAL_MS = 5000;
 
+const SHUTDOWN_TIMEOUT_MS = 20000; // decision 009
+const WATCH_INTERVAL_MS = 200;
 let shuttingDown = false;
+let shutdownStartedAt = null;
 
 function handleStopSignal(signalName) {
   if (shuttingDown) {
     return;
   }
   shuttingDown = true;
+  shutdownStartedAt = Date.now();
   console.log("Worker " + WORKER_ID + " received " + signalName + ", will stop after current job");
 }
 
@@ -47,15 +51,40 @@ async function processJob(job) {
 
     // Run the handler, with a heartbeat keeping the lease alive
     const heartbeatTimer = heartbeat.startHeartbeat(job.id, WORKER_ID);
+    let finished = false;
     let handlerError = null;
 
-    try {
-        await handler(job.payload, job);
-    } catch (error) {
-        handlerError = error;
-    } finally {
-        heartbeat.stopHeartbeat(heartbeatTimer);      // always stop, success or failure
+    // Start the job but do not await it. When it ends, set the flags.
+    handler(job.payload, job).then(
+        function onHandlerSuccess() {
+            finished = true;
+        },
+        function onHandlerFailure(error) {
+            handlerError = error;
+            finished = true;
+        }
+    );
+
+    // Watch the job and the clock at the same time
+    while (!finished) {
+        const deadlinePassed =
+            shuttingDown && Date.now() - shutdownStartedAt >= SHUTDOWN_TIMEOUT_MS;
+
+        if (deadlinePassed) {
+            heartbeat.stopHeartbeat(heartbeatTimer);
+            const released = await finishJob.releaseJob(job.id, WORKER_ID);
+            console.log(
+                released
+                    ? "Job " + job.id + " released back to the queue (shutdown timeout)"
+                    : "Job " + job.id + " could not be released, the lease was lost"
+            );
+            return;
+        }
+
+        await sleep(WATCH_INTERVAL_MS);
     }
+
+    heartbeat.stopHeartbeat(heartbeatTimer);
 
     // Handler failed: retry or give up
     if (handlerError !== null) {
@@ -111,7 +140,7 @@ async function runWorker() {
 
             if (job === null) {
                 await sleep(IDLE_SLEEP_MS);
-                continue; // check again, never stop
+                continue; // check again
             }
 
             await processJob(job);
@@ -122,7 +151,8 @@ async function runWorker() {
         }
     }
     console.log("Worker " + WORKER_ID + " stopped");
-    await pool.end();  
+    await pool.end();
+    process.exit(0);
 }
 
 runWorker();
