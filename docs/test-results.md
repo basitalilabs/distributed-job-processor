@@ -101,3 +101,16 @@ Final row (job 123): `done`, `attempts: 2`,
 
 Not tested: workers on separate physical machines, or a network failure
 between a worker and the database.
+
+## Graceful shutdown (Phase 6)
+
+Settings: shutdown timeout 20 s, Docker `stop_grace_period` 30 s.
+
+| Test | Before Phase 6 | After Phase 6 |
+|---|---|---|
+| `docker compose stop worker`, 2 idle workers | 4.5 s, `Exited (137)` (forced kill) | 1.9 s, `Exited (0)` |
+| Ctrl + C during an 8 s job (job 124) | Job cut, rerun after lease expiry | Job finished, `done`, `attempts: 1`, then worker exited |
+| Ctrl + C during a 60 s job (job 127, laptop) | Job cut, rerun after lease expiry | Released about 20 s after the signal: `waiting`, `attempts: 0`. Next worker ran it: `done`, `attempts: 1` |
+| `docker compose stop worker` during a 60 s job (job 128) | Forced kill | Busy worker stopped in 20.4 s, idle one in 0.4 s, both `Exited (0)`. Job `waiting`, `attempts: 0` |
+
+Not tested: a second stop signal during the 20 s wait, or a database outage during shutdown.

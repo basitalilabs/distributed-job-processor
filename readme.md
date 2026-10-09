@@ -2,7 +2,7 @@
 
 A backend system that runs background jobs across multiple workers, built on Node.js and PostgreSQL. Jobs are stored in PostgreSQL and claimed with row-level locking, so the same job is never picked up by two workers at once. Failed jobs retry with backoff, and recurring jobs run on cron schedules.
 
-**Status:** in active development. Phases 0 to 5 of 9 are complete. See [Roadmap](#roadmap).
+**Status:** in active development. Phases 0 to 6 of 9 are complete. See [Roadmap](#roadmap).
 
 ## Features
 
@@ -12,6 +12,7 @@ A backend system that runs background jobs across multiple workers, built on Nod
 - Permanent errors skip retries; jobs that run out of attempts are kept with their last error
 - Delayed jobs (`runAt`)
 - Recurring jobs from cron expressions, safe to run with several scheduler instances
+- On SIGTERM a worker finishes its current job, or releases it after 20 s, and exits cleanly
 - Versioned SQL migrations
 
 ## Architecture
@@ -149,7 +150,7 @@ The reasoning and trade-offs behind each choice are in [docs/decisions.md](docs/
 - [x] Phase 3: retries, backoff, jitter
 - [x] Phase 4: recurring jobs
 - [x] Phase 5: crash recovery (lease expiry, heartbeat)
-- [ ] Phase 6: graceful shutdown
+- [x] Phase 6: graceful shutdown
 - [ ] Phase 7: webhook delivery with HMAC signing
 - [ ] Phase 8: dashboard
 - [ ] Phase 9: automated tests, load test, CI, deployment
