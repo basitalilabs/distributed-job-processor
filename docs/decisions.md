@@ -187,3 +187,29 @@ Trade-offs:
 - Lowering attempts on release means a job that is released on every deploy never
   runs out of attempts from that cause. This is intended.
 - If the worker is killed before it can release the job, the reaper still recovers it (decision 007).
+
+## 010: Webhook delivery
+
+Decision:
+- A job can have an optional `callbackUrl`.
+- When the job reaches a final state (`done`, or `failed` with no retry), the worker
+  inserts a new job of type `deliver_webhook` with the URL, job id and final status.
+- No webhook is sent for a failure that will be retried.
+- The status update and the webhook job insert happen in one transaction (outbox pattern).
+- The `deliver_webhook` handler sends an HTTP POST:
+  - Timeout 10 s.
+  - Any 2xx response = delivered. Anything else, or a timeout = error, normal retry.
+- `deliver_webhook` jobs get `max_attempts = 10`, which covers about 20 minutes with the
+  backoff from decision 005.
+
+Why:
+- Delivery reuses the queue: retries, backoff, leases, reaper and graceful shutdown,
+  with no new retry code.
+- A webhook failure never re-runs the original job.
+- The transaction makes sure a finished job always has its webhook queued.
+
+Trade-offs:
+- At-least-once: if the worker crashes after the HTTP call succeeded but before marking
+  the webhook job done, the shop receives it twice. Receivers must handle duplicates.
+- A receiver down for more than about 20 minutes misses the webhook.
+- Requests are not signed yet (next step).
