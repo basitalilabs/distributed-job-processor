@@ -41,7 +41,7 @@ async function processJob(job) {
     // No handler: permanent error, fail right away (decision 003)
     if (handler === null) {
         await finishJob.markJobFailed(
-            job.id,
+            job,
             WORKER_ID,
             "No handler for job type: " + job.type,
         );
@@ -103,7 +103,7 @@ async function processJob(job) {
             return;
         }
 
-        const recorded = await finishJob.markJobFailed(job.id, WORKER_ID, message);
+        const recorded = await finishJob.markJobFailed(job, WORKER_ID, message);
         console.log(
             recorded
                 ? "Job " + job.id + " failed permanently: " + message
@@ -113,7 +113,7 @@ async function processJob(job) {
     }
 
     // Handler succeeded
-    const recorded = await finishJob.markJobDone(job.id, WORKER_ID);
+    const recorded = await finishJob.markJobDone(job, WORKER_ID);
     if (recorded) {
         console.log("Job " + job.id + " done");
     } else {
