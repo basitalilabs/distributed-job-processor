@@ -19,14 +19,14 @@ router.post("/", async function createJob(req, res, next) {
   const payload = req.body.payload !== undefined ? req.body.payload : {};
   const runAt = req.body.runAt !== undefined ? req.body.runAt : null;
   const maxAttempts = req.body.maxAttempts !== undefined ? req.body.maxAttempts : DEFAULT_MAX_ATTEMPTS;
-
+  const callbackUrl = req.body.callbackUrl !== undefined ? req.body.callbackUrl : null;
   // 3. Save
   try {
     const result = await pool.query(
-      "INSERT INTO jobs (type, payload, run_at, max_attempts) " +
-      "VALUES ($1, $2, COALESCE($3::timestamptz, now()), $4) " +
+      "INSERT INTO jobs (type, payload, run_at, max_attempts, callback_url) " +
+      "VALUES ($1, $2, COALESCE($3::timestamptz, now()), $4, $5) " +
       "RETURNING *",
-      [type, payload, runAt, maxAttempts]
+      [type, payload, runAt, maxAttempts, callbackUrl]
     );
 
     // 4. Respond

@@ -4,6 +4,16 @@ const MAX_ATTEMPTS = 10;
 
 const isPlainObject = require("../utils/isPlainObject");
 
+function isHttpUrl(value) {
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch (error) {
+    return false;
+  }
+  return parsed.protocol === "http:" || parsed.protocol === "https:";
+}
+
 function validateCreateJob(body) {
   const errors = [];
 
@@ -38,6 +48,14 @@ function validateCreateJob(body) {
       errors.push("maxAttempts must be a whole number from " + MIN_ATTEMPTS + " to " + MAX_ATTEMPTS);
     }
   }
+
+    if (body.callbackUrl !== undefined) {
+        if (typeof body.callbackUrl !== "string" || body.callbackUrl.length > 2000) {
+            errors.push("callbackUrl must be a string of at most 2000 characters");
+        } else if (!isHttpUrl(body.callbackUrl)) {
+            errors.push("callbackUrl must be a valid http or https URL");
+        }
+    }
 
   return errors;
 }

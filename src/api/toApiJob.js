@@ -9,7 +9,8 @@ function toApiJob(row) {
     runAt: row.run_at,
     lastError: row.last_error,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    callbackUrl: row.callback_url
   };
 }
 
