@@ -213,3 +213,25 @@ Trade-offs:
   the webhook job done, the shop receives it twice. Receivers must handle duplicates.
 - A receiver down for more than about 20 minutes misses the webhook.
 - Requests are not signed yet (next step).
+
+## 011: Webhook signing
+
+Decision:
+- Every webhook request carries two headers:
+  - `X-Webhook-Timestamp`: Unix time in seconds when the request was sent
+  - `X-Webhook-Signature`: `sha256=` + hex HMAC-SHA256 of `timestamp + "." + body`
+- The secret comes from `WEBHOOK_SECRET` in the environment. It is never sent.
+- The signature is calculated at send time, so every retry has a fresh timestamp.
+- Receivers should recompute the signature, compare it in constant time, and reject
+  requests older than 5 minutes.
+
+Why:
+- A signature proves the body was not changed and came from someone with the secret,
+  without the secret ever appearing in requests or logs.
+- The signed timestamp stops replaying an old request.
+
+Trade-offs:
+- One secret for all receivers. Anyone who holds it can sign requests, so the
+  system is single-tenant. Per-client secrets need accounts and API keys, which are
+  out of scope.
+- Receivers must keep their clock roughly correct for the 5 minute window.
