@@ -1,10 +1,12 @@
 const sendEmail = require("./sendEmail");
 const flaky = require("./flaky");
 const slow = require("./slow");
+const deliverWebhook = require("./deliverWebhook");
 const handlers = {
   send_email: sendEmail,
   flaky: flaky,
-  slow: slow
+  slow: slow,
+  deliver_webhook: deliverWebhook
 };
 
 function getHandler(type) {
