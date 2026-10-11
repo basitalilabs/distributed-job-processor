@@ -141,7 +141,8 @@ The reasoning and trade-offs behind each choice are in [docs/decisions.md](docs/
 - Crash recovery is tested with containers on one host, not on separate machines.
 - Workers stop immediately on Ctrl+C. Graceful shutdown is planned.
 - Handlers are simulated. A real webhook delivery handler is planned.
-- - `callbackUrl` is checked for http/https only. It is not protected against SSRF (for example `http://localhost` or private IP ranges).
+- `callbackUrl` is checked for http/https only. It is not protected against SSRF (for example `http://localhost` or private IP ranges).
+- Webhooks are at-least-once and can arrive out of order. Receivers should use `jobId` to ignore duplicates.
 
 ## Roadmap
 

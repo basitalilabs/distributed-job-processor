@@ -114,3 +114,17 @@ Settings: shutdown timeout 20 s, Docker `stop_grace_period` 30 s.
 | `docker compose stop worker` during a 60 s job (job 128) | Forced kill | Busy worker stopped in 20.4 s, idle one in 0.4 s, both `Exited (0)`. Job `waiting`, `attempts: 0` |
 
 Not tested: a second stop signal during the 20 s wait, or a database outage during shutdown.
+
+## Webhooks (Phase 7)
+
+Receiver: `scripts/fake-receiver.js` on port 4000 (MODE=ok answers 200, MODE=fail answers 500).
+
+| Test | Result |
+|---|---|
+| Job with callbackUrl, receiver ok (job 138) | Webhook job 139 created with the final status, delivered on attempt 1 |
+| Receiver answering 500 (job 140, webhook job 141) | Retried after 5.8 s, 10.8 s, 21.2 s, 44.1 s. Receiver switched to ok, attempt 5 delivered, `done`, `attempts: 5` |
+| Another job during the 44 s wait (job 142) | Its webhook (143) was delivered immediately. The failing webhook did not block the worker |
+| Final status `failed` (job 134) | Webhook job 135 created with `status: failed` |
+| No callbackUrl (job 132) | No webhook job created |
+
+Observed: webhooks can arrive out of order (job 142's arrived before job 140's).
