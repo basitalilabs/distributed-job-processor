@@ -161,5 +161,5 @@ The reasoning and trade-offs behind each choice are in [docs/decisions.md](docs/
 - [x] Phase 5: crash recovery (lease expiry, heartbeat)
 - [x] Phase 6: graceful shutdown
 - [x] Phase 7: webhook delivery with HMAC signing
-- [ ] Phase 8: dashboard
+- [x] Phase 8: dashboard
 - [ ] Phase 9: automated tests, load test, CI, deployment
