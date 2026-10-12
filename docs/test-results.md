@@ -128,3 +128,12 @@ Receiver: `scripts/fake-receiver.js` on port 4000 (MODE=ok answers 200, MODE=fai
 | No callbackUrl (job 132) | No webhook job created |
 
 Observed: webhooks can arrive out of order (job 142's arrived before job 140's).
+
+### Signing (decision 011)
+
+| Test | Result |
+|---|---|
+| Real signed webhooks (jobs 144 to 154) | Receiver recomputed the signature: valid, 200 |
+| Real headers, body changed `done` to `failed` (job 152 headers, 126 s old) | 401 bad signature |
+| Exact copy of a real request replayed after 224 s (limit set to 10 s for the test) | 401 timestamp too old |
+| Exact copy replayed within the window (jobs 146, 150) | Accepted, 200. Expected: replay protection only covers requests older than the window |
