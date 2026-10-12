@@ -2,6 +2,7 @@ const express = require("express");
 const pool = require("../db/pool");
 const jobsRouter = require("./routes/jobs");
 const schedulesRouter = require("./routes/schedules");
+const statsRouter = require("./routes/stats");
 const app = express();
 
 app.use(express.json({ limit: "64kb" }));
@@ -19,6 +20,7 @@ app.get("/health", async function healthCheck(req, res) {
 
 app.use("/jobs", jobsRouter);
 app.use("/schedules", schedulesRouter);
+app.use("/stats", statsRouter);
 // 404: no route matched
 app.use(function handleNotFound(req, res) {
   res.status(404).json({ error: "Not found" });
