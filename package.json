@@ -8,7 +8,6 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "db:check": "node --env-file=.env scripts/check-db.js",
     "migrate": "node --env-file=.env scripts/migrate.js",
     "dev": "node --env-file=.env --watch src/api/server.js",
@@ -16,7 +15,8 @@
     "worker": "node --env-file=.env src/worker/worker.js",
     "scheduler": "node --env-file=.env src/scheduler/scheduler.js",
     "db": "docker compose up -d",
-    "psql": "docker exec -it distributed-job-processor-db psql -U job_processor -d job_processor"
+    "psql": "docker exec -it distributed-job-processor-db psql -U job_processor -d job_processor",
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",
