@@ -137,3 +137,12 @@ Observed: webhooks can arrive out of order (job 142's arrived before job 140's).
 | Real headers, body changed `done` to `failed` (job 152 headers, 126 s old) | 401 bad signature |
 | Exact copy of a real request replayed after 224 s (limit set to 10 s for the test) | 401 timestamp too old |
 | Exact copy replayed within the window (jobs 146, 150) | Accepted, 200. Expected: replay protection only covers requests older than the window |
+
+## Dashboard (Phase 8)
+
+| Situation | Dashboard showed |
+|---|---|
+| Only job 6 waiting (run_at in 2030) | "Nothing due", lag 0. Future jobs do not count as lag |
+| 3 slow jobs (20 s), no worker | "Keeping up", then "Falling behind" once the oldest passed 30 s |
+| 1 worker started | Worker listed with 1 job, still "Falling behind" at 32 s: one worker could not keep up with three 20 s jobs |
+| Failures all older than an hour | Failed count shown in normal colour, not red |

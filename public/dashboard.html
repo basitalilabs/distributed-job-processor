@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Job queue</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dashboard.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Job queue</h1>
+    <p class="live" id="live">
+      <span class="live-dot" id="liveDot" aria-hidden="true"></span>
+      <span id="updated">Connecting</span>
+    </p>
+  </header>
+
+  <main>
+    <!-- The one question this page answers: is the queue keeping up? -->
+    <section class="health" id="health" data-state="loading" aria-live="polite">
+      <div class="health-text">
+        <p class="verdict" id="verdict">Checking the queue</p>
+        <p class="verdict-detail" id="verdictDetail">Waiting for the first numbers from the API.</p>
+      </div>
+
+      <div class="lag">
+        <p class="lag-figure"><span id="lagValue">0</span><span class="lag-unit" id="lagUnit">s</span></p>
+        <p class="lag-caption">Wait time of the oldest job that is ready to run</p>
+        <div class="lag-track" aria-hidden="true">
+          <div class="lag-fill" id="lagFill"></div>
+          <span class="lag-tick lag-tick-half">30 s</span>
+          <span class="lag-tick lag-tick-end">60 s</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="counts" aria-label="Jobs by status">
+      <div class="count">
+        <p class="count-value" id="waiting">0</p>
+        <p class="count-label">Waiting</p>
+      </div>
+      <div class="count">
+        <p class="count-value" id="running">0</p>
+        <p class="count-label">Running</p>
+      </div>
+      <div class="count">
+        <p class="count-value" id="done">0</p>
+        <p class="count-label">Done</p>
+      </div>
+      <div class="count count-failed" id="failedCount">
+        <p class="count-value" id="failed">0</p>
+        <p class="count-label">Failed, <span id="failedLastHour">0</span> in the last hour</p>
+      </div>
+    </section>
+
+    <div class="panels">
+      <section class="panel" aria-labelledby="workersTitle">
+        <h2 id="workersTitle">Workers</h2>
+        <p class="panel-note">Holding a job right now</p>
+        <ul class="worker-list" id="workers"></ul>
+      </section>
+
+      <section class="panel" aria-labelledby="failuresTitle">
+        <h2 id="failuresTitle">Recent failures</h2>
+        <p class="panel-note">The last 10 jobs that ran out of attempts or failed permanently</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Job</th>
+                <th scope="col">Type</th>
+                <th scope="col" class="num">Tries</th>
+                <th scope="col">Error</th>
+                <th scope="col">When</th>
+              </tr>
+            </thead>
+            <tbody id="failures"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/dashboard.js"></script>
+</body>
+</html>

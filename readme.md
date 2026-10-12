@@ -2,7 +2,9 @@
 
 A backend system that runs background jobs across multiple workers, built on Node.js and PostgreSQL. Jobs are stored in PostgreSQL and claimed with row-level locking, so the same job is never picked up by two workers at once. Failed jobs retry with backoff, and recurring jobs run on cron schedules.
 
-**Status:** in active development. Phases 0 to 7 of 9 are complete. See [Roadmap](#roadmap).
+![Dashboard showing the queue falling behind](docs/dashboard.jpeg)
+
+**Status:** in active development. Phases 0 to 8 of 9 are complete. See [Roadmap](#roadmap).
 
 ## Features
 
@@ -15,6 +17,7 @@ A backend system that runs background jobs across multiple workers, built on Nod
 - On SIGTERM a worker finishes its current job, or releases it after 20 s, and exits cleanly
 - Versioned SQL migrations
 - Webhooks: an optional `callbackUrl` is called when a job reaches a final state. Delivery is itself a job (retries, backoff, crash recovery), queued in the same transaction as the final status (outbox pattern), and signed with HMAC-SHA256 plus a timestamp.
+- Live dashboard at `/dashboard`, backed by `GET /stats`: queue lag (wait time of the oldest due job), counts per status, failures in the last hour, workers holding jobs, and recent failures.
 
 ## Architecture
 
@@ -146,6 +149,7 @@ The reasoning and trade-offs behind each choice are in [docs/decisions.md](docs/
 - Webhooks are at-least-once and can arrive out of order. Receivers should use `jobId` to ignore duplicates.
 - One webhook secret for all receivers, so the system is single-tenant. Per-client secrets need accounts and API keys.
 - A copy of a webhook replayed within the 5 minute window is accepted. Receivers should also ignore duplicate `jobId`s.
+- The dashboard has no login. Anyone who can reach the API can see it.
 
 ## Roadmap
 

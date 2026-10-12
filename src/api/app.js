@@ -1,11 +1,16 @@
 const express = require("express");
+const path = require("path");
 const pool = require("../db/pool");
 const jobsRouter = require("./routes/jobs");
 const schedulesRouter = require("./routes/schedules");
 const statsRouter = require("./routes/stats");
 const app = express();
+const PUBLIC_DIR = path.join(__dirname, "..", "..", "public");
 
 app.use(express.json({ limit: "64kb" }));
+// Sends dashboard.css and dashboard.js
+app.use(express.static(PUBLIC_DIR));
+
 
 // Health check: API is up, and the database answers
 app.get("/health", async function healthCheck(req, res) {
@@ -21,6 +26,9 @@ app.get("/health", async function healthCheck(req, res) {
 app.use("/jobs", jobsRouter);
 app.use("/schedules", schedulesRouter);
 app.use("/stats", statsRouter);
+app.get("/dashboard", function showDashboard(req, res) {
+    res.sendFile(path.join(PUBLIC_DIR, "dashboard.html"));
+});
 // 404: no route matched
 app.use(function handleNotFound(req, res) {
   res.status(404).json({ error: "Not found" });
