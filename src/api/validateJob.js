@@ -3,16 +3,7 @@ const MIN_ATTEMPTS = 1;
 const MAX_ATTEMPTS = 10;
 
 const isPlainObject = require("../utils/isPlainObject");
-
-function isHttpUrl(value) {
-  let parsed;
-  try {
-    parsed = new URL(value);
-  } catch (error) {
-    return false;
-  }
-  return parsed.protocol === "http:" || parsed.protocol === "https:";
-}
+const isHttpUrl = require("../utils/isHttpUrl");
 
 function validateCreateJob(body) {
   const errors = [];
