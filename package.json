@@ -16,7 +16,7 @@
     "scheduler": "node --env-file=.env src/scheduler/scheduler.js",
     "db": "docker compose up -d",
     "psql": "docker exec -it distributed-job-processor-db psql -U job_processor -d job_processor",
-    "test": "node --test"
+    "test": "node --env-file-if-exists=.env --test --test-concurrency=1"
   },
   "keywords": [],
   "author": "",
