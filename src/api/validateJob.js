@@ -4,6 +4,7 @@ const MAX_ATTEMPTS = 10;
 
 const isPlainObject = require("../utils/isPlainObject");
 const isHttpUrl = require("../utils/isHttpUrl");
+const isIsoDate = require("../utils/isIsoDate");
 
 function validateCreateJob(body) {
   const errors = [];
@@ -24,9 +25,8 @@ function validateCreateJob(body) {
   }
 
   if (body.runAt !== undefined) {
-    const date = new Date(body.runAt);
-    if (typeof body.runAt !== "string" || isNaN(date.getTime())) {
-      errors.push("runAt must be a valid ISO date string, e.g. 2026-10-01T10:00:00Z");
+    if (!isIsoDate(body.runAt)) {
+       errors.push("runAt must be an ISO date with a timezone, e.g. 2026-10-01T10:00:00Z")
     }
   }
 

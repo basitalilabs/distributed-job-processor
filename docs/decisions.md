@@ -235,3 +235,27 @@ Trade-offs:
   system is single-tenant. Per-client secrets need accounts and API keys, which are
   out of scope.
 - Receivers must keep their clock roughly correct for the 5 minute window.
+
+## 013: Strict runAt format with a required timezone
+
+**Context**
+`validateJob` used `new Date(runAt)` and only rejected `Invalid Date`. A unit test showed that JavaScript's date parser is far too loose:
+- `"hello 5"` becomes 1 May 2001, so the job is stored in the past and runs immediately.
+- `"1"` becomes 1 Jan 2001.
+- `"2026-02-30T10:00:00Z"` silently rolls over to 2 March 2026.
+
+None of these were rejected. The API returned 201.
+
+**Decision**
+`runAt` must match strict ISO 8601: `YYYY-MM-DDTHH:MM`, optional `:SS` and `.mmm`, then `Z` or an offset like `+05:00`. The check lives in `src/utils/isIsoDate.js` and runs in three stages:
+1. The shape must match the pattern exactly.
+2. `new Date()` must not return `Invalid Date` (catches month 13, hour 25).
+3. The day must exist in that month (catches Feb 30 and Feb 29 in non-leap years).
+
+A timezone is required. Without one, `"2026-10-01T10:00:00"` means 10:00 in the server's local timezone. A worker on a laptop (UTC+5) and one in Docker (UTC) would read the same request 5 hours apart, so rejecting it is safer than guessing.
+
+**Trade-offs**
+- Clients that sent dates without a timezone, or date-only strings like `"2026-10-01"`, now get a 400. This is a breaking change, accepted because the old behaviour was silently wrong.
+- Leap seconds and years before 0000 are not supported. Neither matters for scheduling jobs.
+
+**Found by:** the `rejects: runAt is random text` unit test (Phase 9).
