@@ -1,5 +1,5 @@
 # Distributed Background Job Processing System
-![tests](https://github.com/basitalilabs/distributed-job-processor/actions/workflows/test.yml/badge.svg)
+[![tests](https://github.com/basitalilabs/distributed-job-processor/actions/workflows/test.yml/badge.svg)](https://github.com/basitalilabs/distributed-job-processor/actions/workflows/test.yml)
 
 A backend system that runs background jobs across multiple workers, built on Node.js and PostgreSQL. Jobs are stored in PostgreSQL and claimed with row-level locking, so the same job is never picked up by two workers at once. Failed jobs retry with backoff, and recurring jobs run on cron schedules.
 
