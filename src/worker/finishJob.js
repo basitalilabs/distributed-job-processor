@@ -84,5 +84,6 @@ module.exports = {
   markJobDone: markJobDone,
   markJobFailed: markJobFailed,
   retryJob: retryJob,
-  releaseJob: releaseJob
+  releaseJob: releaseJob,
+  WEBHOOK_MAX_ATTEMPTS: WEBHOOK_MAX_ATTEMPTS
 };
