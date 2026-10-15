@@ -259,3 +259,20 @@ A timezone is required. Without one, `"2026-10-01T10:00:00"` means 10:00 in the 
 - Leap seconds and years before 0000 are not supported. Neither matters for scheduling jobs.
 
 **Found by:** the `rejects: runAt is random text` unit test (Phase 9).
+
+## 014: Test strategy
+
+**Decision**
+- Node's built-in `node:test` runner. No test framework dependency.
+- Tests run against a **real Postgres**, not mocks. The queue's correctness lives in SQL (`SKIP LOCKED`, lease checks, the outbox), and a mock would only test my guess of how Postgres behaves.
+- A separate `jobs_test` database. The test helper refuses to run unless the database name ends in `_test`, because tests run `TRUNCATE`.
+- `--test-concurrency=1`, so DB test files never wipe tables under each other.
+- GitHub Actions runs the full suite on every push against a Postgres 17 service container. Migrations run with `ON_ERROR_STOP=1`, so a broken migration fails the build.
+
+**Trade-offs**
+- Running tests needs Postgres. Locally that's the existing Docker container, and in CI a service container.
+- Not covered by automated tests: the worker loop end to end (heartbeat, graceful shutdown on SIGTERM, the shutdown timeout), real HTTP webhook delivery, and multi-container crash recovery. These are covered by the manual tests recorded in `docs/test-results.md`.
+
+**Bugs found by the suite**
+1. `new Date()` accepted strings like `"hello 5"` (as 2001), so bad `runAt` values scheduled jobs to run immediately. Fixed with a strict ISO check (decision 013).
+2. The reaper failed lease-expired jobs with a plain UPDATE that skipped the outbox, so their webhooks never fired. Fixed with a data-modifying CTE (addendum to decision 010).

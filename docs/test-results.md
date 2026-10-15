@@ -146,3 +146,25 @@ Observed: webhooks can arrive out of order (job 142's arrived before job 140's).
 | 3 slow jobs (20 s), no worker | "Keeping up", then "Falling behind" once the oldest passed 30 s |
 | 1 worker started | Worker listed with 1 job, still "Falling behind" at 32 s: one worker could not keep up with three 20 s jobs |
 | Failures all older than an hour | Failed count shown in normal colour, not red |
+
+## Phase 9: Automated tests
+
+`npm test` runs 65 tests in about 3 seconds. CI runs the same suite on every push.
+
+| Area | Tests | What it proves |
+|---|---|---|
+| Webhook signature | 5 | format, determinism, and a fixed known value that locks the `timestamp.body` format |
+| URL validation | 8 | only http/https, including `javascript:` and uppercase schemes |
+| Job validation | 21 | every rule in `POST /jobs`, edge values on both sides of each range |
+| Backoff and jitter | 10 | 5, 10, 20, 40... capped at 300; jitter stays within 0 to 20% (mocked and 1000 real runs) |
+| Test DB setup | 1 | reset works; the `_test` safety lock was checked by hand |
+| API | 5 | 201 / 400 / 404, and a 400 saves nothing |
+| finishJob | 6 | outbox creates exactly one webhook job; a non-owner can't finish or release a job |
+| Claim and reaper | 9 | 5 concurrent claims get 5 different jobs; lease expiry requeues or fails correctly |
+
+**Mutation checks done by hand** (break the code, confirm the right test fails, restore):
+- `"."` to `":"` in the signature: only the known-value test failed.
+- `attempts - 1` to `attempts + 1` in `releaseJob`: the release test failed.
+- `SKIP LOCKED` removed from `claimJob`: the concurrent-claim test failed.
+
+**Bugs found:** 2 (see decision 014).

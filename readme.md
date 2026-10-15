@@ -5,7 +5,7 @@ A backend system that runs background jobs across multiple workers, built on Nod
 
 ![Dashboard showing the queue falling behind](docs/dashboard.jpeg)
 
-**Status:** in active development. Phases 0 to 8 of 9 are complete. See [Roadmap](#roadmap).
+**Status:** in active development. Phases 0 to 9 of 9 are complete. See [Roadmap](#roadmap).
 
 ## Features
 
@@ -19,6 +19,7 @@ A backend system that runs background jobs across multiple workers, built on Nod
 - Versioned SQL migrations
 - Webhooks: an optional `callbackUrl` is called when a job reaches a final state. Delivery is itself a job (retries, backoff, crash recovery), queued in the same transaction as the final status (outbox pattern), and signed with HMAC-SHA256 plus a timestamp.
 - Live dashboard at `/dashboard`, backed by `GET /stats`: queue lag (wait time of the oldest due job), counts per status, failures in the last hour, workers holding jobs, and recent failures.
+- Automated test suite (65 tests) with GitHub Actions CI
 
 ## Architecture
 
@@ -140,6 +141,18 @@ Jobs in these tests are simulated (about 1 second each). Details and limits are 
 
 The reasoning and trade-offs behind each choice are in [docs/decisions.md](docs/decisions.md), including why PostgreSQL instead of Redis, the retry policy, and how recurring jobs avoid duplicates.
 
+## Testing
+
+```bash
+npm test
+```
+
+65 tests using Node's built-in test runner, against a real Postgres database (`jobs_test`). CI runs them on every push.
+
+The suite covers validation, webhook signing, backoff, the API, and the queue's core guarantees: concurrent workers never claim the same job, expired leases are recovered, and only the job's owner can finish or release it. It found two real bugs during development (details in `docs/decisions.md`, decision 014).
+
+To run locally, create the test database once and add `TEST_DATABASE_URL` to `.env` (see `.env.example`).
+
 ## Known limitations
 
 - A job that crashes its worker uses one attempt per crash and is retried without backoff.
@@ -163,4 +176,4 @@ The reasoning and trade-offs behind each choice are in [docs/decisions.md](docs/
 - [x] Phase 6: graceful shutdown
 - [x] Phase 7: webhook delivery with HMAC signing
 - [x] Phase 8: dashboard
-- [ ] Phase 9: automated tests, load test, CI, deployment
+- [x] Phase 9: automated tests, load test, CI, deployment
